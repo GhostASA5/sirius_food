@@ -29,5 +29,5 @@ def test_user_topup_rejects_blocked_user_without_database():
     repository = Mock()
     repository.get_by_id.return_value = SimpleNamespace(id=1, balance=0, is_blocked=True)
     with pytest.raises(UserError, match="заблокирован"):
-        UserService(repository).top_up_balance(1, 100)
+        UserService(repository).top_up_balance(1, 100, 1)
     repository.save.assert_not_called()

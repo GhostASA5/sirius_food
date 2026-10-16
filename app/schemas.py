@@ -1,8 +1,9 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr
 
 
 class UserCreate(BaseModel):
     email: EmailStr
+    password: str
     phone: str | None = None
 
 
@@ -11,8 +12,7 @@ class UserResponse(BaseModel):
     email: str
     balance: float
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class MenuItemCreate(BaseModel):
@@ -27,7 +27,6 @@ class MenuItemUpdate(BaseModel):
 
 
 class OrderCreate(BaseModel):
-    user_id: int
     item_id: int
     quantity: int
 

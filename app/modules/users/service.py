@@ -1,10 +1,12 @@
 from typing import Protocol
 
+from app.core.security import hash_password
+
 
 class UserRepositoryPort(Protocol):
     def get_by_email(self, email: str): ...
     def get_by_id(self, user_id: int): ...
-    def create(self, email: str, phone: str | None): ...
+    def create(self, email: str, phone: str | None, password_hash: str, role_name: str): ...
     def save(self, user): ...
 
 
@@ -18,12 +20,16 @@ class UserService:
     def __init__(self, repository: UserRepositoryPort):
         self.repository = repository
 
-    def register(self, email: str, phone: str | None = None):
+    def register(self, email: str, password: str, phone: str | None = None):
         if self.repository.get_by_email(email) is not None:
             raise UserError("Пользователь с таким email уже зарегистрирован")
-        return self.repository.create(email, phone)
+        if not password:
+            raise UserError("Пароль обязателен")
+        return self.repository.create(email, phone, hash_password(password), "student")
 
-    def top_up_balance(self, user_id: int, amount: float) -> float:
+    def top_up_balance(self, user_id: int, amount: float, actor_id: int) -> float:
+        if user_id != actor_id:
+            raise UserError("Access denied", 403)
         user = self.repository.get_by_id(user_id)
         if user is None:
             raise UserError("Пользователь не найден", 404)

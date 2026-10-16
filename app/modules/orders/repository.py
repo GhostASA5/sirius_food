@@ -25,3 +25,13 @@ class OrderRepository:
             self.db.rollback()
             raise
         return order.id
+
+    def get_order(self, order_id: int):
+        return self.db.query(Order).filter(Order.id == order_id).first()
+
+    def save(self, order):
+        self.db.add(order)
+        self.db.commit()
+
+    def get_kitchen_orders(self):
+        return self.db.query(Order).filter(Order.status == "processing").all()
