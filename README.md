@@ -14,7 +14,28 @@
 
 `POST /orders/create` берёт пользователя из JWT; `user_id` отсутствует в теле запроса. `POST /orders/{order_id}/cancel` доступен владельцу заказа, `GET /orders/kitchen/orders` — повару. Изменение меню доступно администратору и повару. `GET /delivery/mine` показывает курьеру только его доставки; `GET /delivery/{delivery_id}` доступен назначенному курьеру, владельцу заказа и администратору. Назначение курьера доступно администратору, завершение доставки — назначенному курьеру. Пополнение баланса доступно только владельцу. Регистрация остаётся публичной, чтобы новый пользователь мог получить учётную запись.
 
-## Запуск
+## Запуск в Docker
+
+Из каталога `sirius_food` создайте `.env` из [.env.example](.env.example) и замените `SECRET_KEY` на случайную строку длиной не менее 32 символов. В PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+docker compose up --build -d app
+docker compose logs -f app
+```
+
+В Bash первая команда — `cp .env.example .env`. Compose дождётся готовности PostgreSQL, контейнер приложения применит миграции и запустит API на http://127.0.0.1:8000. При `DEBUG=true` Swagger открыт по http://127.0.0.1:8000/docs. Значение `DATABASE_URL` для контейнера задаёт Compose: подключение идёт к сервису `db`.
+
+Проверка состояния и остановка:
+
+```powershell
+docker compose ps
+docker compose down
+```
+
+База данных хранится в томе `pg_data` и сохраняется после `docker compose down`. Для настройки роли или пароля существующего пользователя используйте `docker compose exec app python -m scripts.manage_users <email> --role cook` или `--set-password`.
+
+## Запуск без Docker для приложения
 
 Из каталога `sirius_food`:
 

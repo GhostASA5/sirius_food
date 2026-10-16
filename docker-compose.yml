@@ -1,4 +1,15 @@
 services:
+  app:
+    build: .
+    environment:
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
+      DATABASE_URL: postgresql://sirius:sirius@db:5432/sirius_food
+      DEBUG: ${DEBUG:-false}
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
   db:
     image: postgres:15
     environment:
@@ -9,6 +20,11 @@ services:
       - "5432:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sirius -d sirius_food"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
   redis:
     image: redis:7
     ports:
