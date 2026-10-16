@@ -185,3 +185,31 @@ def test_user_cannot_top_up_another_balance(client):
     assert http.post(
         f"/users/{ids['bob']}/topup?amount=10", headers=auth(ids["alice"])
     ).status_code == 403
+
+
+def test_admin_has_role_and_object_permissions(client):
+    http, session_factory, ids = client
+    admin_headers = auth(ids["boss"])
+    assert http.get("/orders/kitchen/orders", headers=admin_headers).status_code == 200
+    assert http.post(
+        "/orders/create", json={"item_id": 1, "quantity": 1}, headers=admin_headers
+    ).status_code == 200
+    assert http.post(
+        f"/users/{ids['bob']}/topup?amount=10", headers=admin_headers
+    ).status_code == 200
+    with session_factory() as db:
+        foreign_order = Order(user_id=ids["alice"], item_id=1, quantity=1, status="processing")
+        delivery_order = Order(user_id=ids["alice"], item_id=1, quantity=1, status="paid")
+        db.add_all([foreign_order, delivery_order])
+        db.flush()
+        delivery = Delivery(
+            order_id=delivery_order.id, courier_id=ids["driver"], status="in_progress"
+        )
+        db.add(delivery)
+        db.commit()
+        order_id = foreign_order.id
+        delivery_id = delivery.id
+    assert http.post(f"/orders/{order_id}/cancel", headers=admin_headers).status_code == 200
+    assert http.patch(
+        f"/delivery/{delivery_id}/complete", headers=admin_headers
+    ).status_code == 200

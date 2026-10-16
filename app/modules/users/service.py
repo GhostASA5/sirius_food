@@ -27,8 +27,10 @@ class UserService:
             raise UserError("Пароль обязателен")
         return self.repository.create(email, phone, hash_password(password), "student")
 
-    def top_up_balance(self, user_id: int, amount: float, actor_id: int) -> float:
-        if user_id != actor_id:
+    def top_up_balance(
+        self, user_id: int, amount: float, actor_id: int, actor_role: str = "student"
+    ) -> float:
+        if actor_role != "admin" and user_id != actor_id:
             raise UserError("Access denied", 403)
         user = self.repository.get_by_id(user_id)
         if user is None:

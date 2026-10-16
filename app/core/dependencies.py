@@ -31,7 +31,7 @@ def get_current_user(
 
 def require_role(*allowed_roles: str):
     def checker(current_user: User = Depends(get_current_user)) -> User:
-        if current_user.role.name not in allowed_roles:
+        if current_user.role.name != "admin" and current_user.role.name not in allowed_roles:
             raise HTTPException(403, "Access denied")
         return current_user
 

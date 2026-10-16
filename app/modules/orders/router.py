@@ -40,7 +40,9 @@ def cancel_order(
     db: Session = Depends(get_db),
 ):
     try:
-        OrderService(OrderRepository(db)).cancel_order(order_id, current_user.id)
+        OrderService(OrderRepository(db)).cancel_order(
+            order_id, current_user.id, current_user.role.name
+        )
     except OrderError as exc:
         raise HTTPException(exc.status_code, str(exc)) from exc
     return {"status": "success"}

@@ -51,7 +51,9 @@ def complete_delivery(
     db: Session = Depends(get_db),
 ):
     try:
-        DeliveryService(DeliveryRepository(db)).complete(delivery_id, current_user.id)
+        DeliveryService(DeliveryRepository(db)).complete(
+            delivery_id, current_user.id, current_user.role.name
+        )
     except DeliveryError as exc:
         raise HTTPException(exc.status_code, str(exc)) from exc
     return {"status": "success"}

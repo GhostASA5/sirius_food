@@ -38,11 +38,13 @@ class DeliveryService:
             raise DeliveryError("У курьера уже есть активная доставка")
         return self.repository.create(order_id, courier_id).id
 
-    def complete(self, delivery_id: int, current_user_id: int) -> None:
+    def complete(
+        self, delivery_id: int, current_user_id: int, actor_role: str = "courier"
+    ) -> None:
         delivery = self.repository.get_delivery(delivery_id)
         if delivery is None:
             raise DeliveryError("Доставка не найдена", 404)
-        if delivery.courier_id != current_user_id:
+        if actor_role != "admin" and delivery.courier_id != current_user_id:
             raise DeliveryError("Access denied", 403)
         if delivery.status == "completed":
             raise DeliveryError("Доставка уже завершена")

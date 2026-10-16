@@ -30,7 +30,9 @@ def top_up_balance(
     if amount <= 0:
         raise HTTPException(400, "Сумма пополнения должна быть положительной")
     try:
-        balance = UserService(UserRepository(db)).top_up_balance(user_id, amount, current_user.id)
+        balance = UserService(UserRepository(db)).top_up_balance(
+            user_id, amount, current_user.id, current_user.role.name
+        )
     except UserError as exc:
         raise HTTPException(exc.status_code, str(exc)) from exc
     return {"status": "success", "new_balance": balance}

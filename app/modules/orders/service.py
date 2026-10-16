@@ -35,11 +35,11 @@ class OrderService:
             raise OrderError("Недостаточно средств на балансе студента")
         return self.repository.place_order(user, item, quantity)
 
-    def cancel_order(self, order_id: int, current_user_id: int) -> None:
+    def cancel_order(self, order_id: int, current_user_id: int, actor_role: str = "student") -> None:
         order = self.repository.get_order(order_id)
         if order is None:
             raise OrderError("Order not found", 404)
-        if order.user_id != current_user_id:
+        if actor_role != "admin" and order.user_id != current_user_id:
             raise OrderError("Access denied", 403)
         if order.status in ("cancelled", "delivered"):
             raise OrderError("Order cannot be cancelled")
