@@ -41,6 +41,15 @@ class MenuItem(Base):
     name = Column(String, nullable=False)
     price = Column(Float, nullable=False)
     is_available = Column(Boolean, default=True)
+    category_id = Column(Integer, ForeignKey("menu_categories.id"), nullable=True)
+    category = relationship("MenuCategory")
+
+
+class MenuCategory(Base):
+    __tablename__ = "menu_categories"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, nullable=False)
 
 
 class Order(Base):

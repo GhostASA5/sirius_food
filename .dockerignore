@@ -10,3 +10,5 @@ pytest-cache-files-*
 *.db
 tests
 README.md
+locustfile.py
+requirements-load.txt

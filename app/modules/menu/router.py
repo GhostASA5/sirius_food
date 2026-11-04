@@ -5,9 +5,25 @@ from app.core.dependencies import require_role
 from app.database import get_db
 from app.modules.menu.repository import MenuRepository
 from app.modules.menu.service import MenuError, MenuService
-from app.schemas import MenuItemCreate, MenuItemUpdate
+from app.schemas import MenuCategoryCreate, MenuItemCreate, MenuItemUpdate
 
 router = APIRouter()
+
+
+@router.get("/items")
+def list_menu_items(db: Session = Depends(get_db)):
+    return MenuService(MenuRepository(db)).get_all()
+
+
+@router.post("/categories", dependencies=[Depends(require_role("admin", "cook"))])
+def create_menu_category(payload: MenuCategoryCreate, db: Session = Depends(get_db)):
+    if len(payload.name) < 2:
+        raise HTTPException(400, "Название категории слишком короткое")
+    try:
+        category_id = MenuService(MenuRepository(db)).create_category(payload.name)
+    except MenuError as exc:
+        raise HTTPException(exc.status_code, str(exc)) from exc
+    return {"status": "success", "category_id": category_id}
 
 
 @router.post("/items", dependencies=[Depends(require_role("admin", "cook"))])
@@ -17,7 +33,9 @@ def create_menu_item(payload: MenuItemCreate, db: Session = Depends(get_db)):
     if len(payload.name) < 2:
         raise HTTPException(400, "Название блюда слишком короткое")
     try:
-        item_id = MenuService(MenuRepository(db)).create(payload.name, payload.price)
+        item_id = MenuService(MenuRepository(db)).create(
+            payload.name, payload.price, payload.category_id
+        )
     except MenuError as exc:
         raise HTTPException(exc.status_code, str(exc)) from exc
     return {"status": "success", "item_id": item_id}
