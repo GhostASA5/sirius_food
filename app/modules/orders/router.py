@@ -5,6 +5,7 @@ from app.core.dependencies import get_current_user, require_role
 from app.database import get_db
 from app.models import User
 from app.modules.orders.repository import OrderRepository
+from app.modules.orders.notifications import CeleryOrderNotifications
 from app.modules.orders.service import OrderError, OrderService
 from app.schemas import OrderCreate
 
@@ -19,7 +20,7 @@ def create_order(
     if payload.quantity <= 0:
         raise HTTPException(400, "Количество должно быть больше нуля")
     try:
-        order_id = OrderService(OrderRepository(db)).create_order(
+        order_id = OrderService(OrderRepository(db), CeleryOrderNotifications()).create_order(
             current_user.id, payload.item_id, payload.quantity
         )
     except OrderError as exc:

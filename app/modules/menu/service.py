@@ -65,4 +65,3 @@ class MenuService:
     def _check_category(self, category_id: int | None) -> None:
         if category_id is not None and self.repository.get_category(category_id) is None:
             raise MenuError("Категория не найдена", 404)
-

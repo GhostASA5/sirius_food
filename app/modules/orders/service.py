@@ -10,6 +10,10 @@ class OrderRepositoryPort(Protocol):
     def get_kitchen_orders(self): ...
 
 
+class OrderNotificationsPort(Protocol):
+    def enqueue_order_created(self, order_id: int, email: str, phone: str | None): ...
+
+
 class OrderError(Exception):
     def __init__(self, message: str, status_code: int = 400):
         super().__init__(message)
@@ -17,8 +21,12 @@ class OrderError(Exception):
 
 
 class OrderService:
-    def __init__(self, repository: OrderRepositoryPort):
+    def __init__(
+        self, repository: OrderRepositoryPort,
+        notifications: OrderNotificationsPort | None = None,
+    ):
         self.repository = repository
+        self.notifications = notifications
 
     def create_order(self, user_id: int, item_id: int, quantity: int) -> int:
         if quantity <= 0:
@@ -33,7 +41,10 @@ class OrderService:
             raise OrderError("Блюдо недоступно")
         if user.balance < item.price * quantity:
             raise OrderError("Недостаточно средств на балансе студента")
-        return self.repository.place_order(user, item, quantity)
+        order_id = self.repository.place_order(user, item, quantity)
+        if self.notifications is not None:
+            self.notifications.enqueue_order_created(order_id, user.email, user.phone)
+        return order_id
 
     def cancel_order(self, order_id: int, current_user_id: int, actor_role: str = "student") -> None:
         order = self.repository.get_order(order_id)

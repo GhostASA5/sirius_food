@@ -20,6 +20,16 @@ class FakeCache:
             self.data.pop(key, None)
             self.ttls.pop(key, None)
 
+    def set(self, key, value, nx=False, ex=None):
+        if nx and key in self.data:
+            return None
+        self.data[key] = value
+        self.ttls[key] = ex
+        return True
+
+    def lpush(self, key, value):
+        self.data.setdefault(key, []).insert(0, value)
+
     @contextmanager
     def lock(self, key, timeout=None, blocking_timeout=None):
         lock = self.locks.setdefault(key, Lock())

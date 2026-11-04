@@ -7,6 +7,9 @@ class Settings(BaseSettings):
     SECRET_KEY: str
     DATABASE_URL: str = "postgresql://sirius:sirius@localhost:5432/sirius_food"
     REDIS_URL: str = "redis://localhost:6379/0"
+    CELERY_BROKER_URL: str = "redis://localhost:6379/1"
+    CELERY_RESULT_BACKEND: str = "redis://localhost:6379/2"
+    SIMULATE_EMAIL_FAILURES: bool = False
     DEBUG: bool = False
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")

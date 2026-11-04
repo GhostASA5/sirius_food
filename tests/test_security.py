@@ -4,6 +4,7 @@ os.environ.setdefault("SECRET_KEY", "test-secret-that-has-at-least-32-characters
 os.environ.setdefault("DATABASE_URL", "sqlite://")
 
 import pytest
+from unittest.mock import Mock
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -20,6 +21,7 @@ from tests.fakes import FakeCache
 @pytest.fixture
 def client(monkeypatch):
     monkeypatch.setattr("app.modules.menu.repository.get_redis_client", FakeCache)
+    monkeypatch.setattr("app.modules.orders.router.CeleryOrderNotifications", Mock)
     engine = create_engine(
         "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
     )
