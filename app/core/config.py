@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     CELERY_BROKER_URL: str = "redis://localhost:6379/1"
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/2"
     SIMULATE_EMAIL_FAILURES: bool = False
+    DELIVERY_GRPC_TARGET: str = "localhost:50051"
     DEBUG: bool = False
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")

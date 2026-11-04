@@ -38,10 +38,22 @@ Locust запускался дважды с 500 пользователями, с
 На локальном API созданы два отдельных тестовых заказа. Результаты замера находятся в [benchmarks/order_latency.csv](benchmarks/order_latency.csv): синхронная имитация заняла 4023,51 мс, ответ после внедрения Celery — 42,62 мс. Логи воркера подтвердили выполнение всех трёх задач для второго заказа. Для демонстрации ошибки email каждого пятого заказа можно временно задать `SIMULATE_EMAIL_FAILURES=true` в окружении воркера; по умолчанию эта имитация выключена.
 
 ```bash
-docker compose up --build -d app worker
+docker compose up --build -d app worker delivery
 docker compose logs -f worker
 docker compose exec redis redis-cli -n 0 LRANGE dlq 0 -1
 ```
+
+## Практическая работа № 6
+
+Модуль доставки вынесен в отдельный gRPC-процесс `delivery`, который работает с теми же моделями и PostgreSQL. Контракт находится в [proto/delivery.proto](proto/delivery.proto). HTTP-маршруты доставки в основном приложении используют gRPC-клиент для назначения курьера, завершения доставки, получения доставки и списка доставок курьера. Клиент передаёт access-токен в metadata; gRPC-сервис самостоятельно проверяет JWT, роль и право на конкретную доставку. При недоступности сервиса HTTP API отвечает 503, при превышении срока ожидания — 504.
+
+`TrackDelivery` реализует Server Streaming: после проверки доступа отправляет `in_progress`, `on_the_way`, `delivered` с интервалом две секунды. Это демонстрационный поток: промежуточные статусы не сохраняются в БД. Статус `delivered` записывается через `CompleteDelivery`. Посмотреть поток для существующей доставки можно из контейнера приложения:
+
+```bash
+docker compose exec app python -m scripts.track_delivery 1
+```
+
+Команда запросит access-токен пользователя, имеющего доступ к доставке. Номер `1` замените на фактический ID доставки. В существующем проекте нет маршрута оплаты заказа; для назначения курьера заказ должен уже иметь статус `paid`. Генерация Python-кода из `.proto` выполняется при сборке Docker-образа и в CI командой `python -m scripts.generate_proto`.
 
 ## Запуск в Docker
 
@@ -49,11 +61,11 @@ docker compose exec redis redis-cli -n 0 LRANGE dlq 0 -1
 
 ```powershell
 Copy-Item .env.example .env
-docker compose up --build -d app worker
+docker compose up --build -d app worker delivery
 docker compose logs -f app
 ```
 
-В Bash первая команда — `cp .env.example .env`. Compose дождётся готовности PostgreSQL, контейнер приложения применит миграции и запустит API на http://127.0.0.1:8000. При `DEBUG=true` Swagger открыт по http://127.0.0.1:8000/docs. Значение `DATABASE_URL` для контейнера задаёт Compose: подключение идёт к сервису `db`.
+В Bash первая команда — `cp .env.example .env`. Compose дождётся готовности PostgreSQL, Redis и gRPC-сервиса; контейнер приложения применит миграции и запустит API на http://127.0.0.1:8000. При `DEBUG=true` Swagger открыт по http://127.0.0.1:8000/docs. Значение `DATABASE_URL` для контейнера задаёт Compose: подключение идёт к сервису `db`.
 
 Проверка состояния и остановка:
 
@@ -74,12 +86,12 @@ source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
 # Замените SECRET_KEY случайной строкой длиной не менее 32 символов.
-docker compose up -d db
+docker compose up -d db redis
 alembic upgrade head
-uvicorn app.main:app --reload
+python -m scripts.generate_proto
 ```
 
-Swagger доступен по http://127.0.0.1:8000/docs при `DEBUG=true`. В конфигурации без режима отладки документация отключена. `.env` исключён из Git.
+В трёх отдельных терминалах с активированным виртуальным окружением и тем же `.env` запустите `python -m delivery_service.server`, `celery -A app.core.celery_app worker --loglevel=info -Q default` и `uvicorn app.main:app --reload`. Swagger доступен по http://127.0.0.1:8000/docs при `DEBUG=true`. В конфигурации без режима отладки документация отключена. `.env` исключён из Git.
 
 Если база создана запуском версии лабораторной № 2 и уже содержит таблицы MVP, отметьте применённую исходную схему командой `alembic stamp 0001_mvp`, затем выполните `alembic upgrade head`. Перед этим сохраните резервную копию БД. Для существующих пользователей миграция оставляет `password_hash` пустым, поскольку исходные пароли неизвестны. Пароль и роль задаются локальной командой администратора:
 
@@ -98,4 +110,4 @@ python -m scripts.manage_users admin@example.com --role admin
 pytest -q
 ```
 
-Тесты сервисов не требуют СУБД. HTTP-тесты используют SQLite в памяти и проверяют отсутствие токена, чужую роль, чужой заказ и доставку, хеширование и тип JWT. CI запускает `pytest` на Python 3.12. Бонусные задания с Redis rate limiting, CORS и rotation refresh-токенов не включены.
+Тесты сервисов не требуют внешней СУБД. HTTP-тесты используют SQLite в памяти и локальный gRPC-сервер; они проверяют отсутствие токена, чужую роль, чужой заказ и доставку, хеширование и тип JWT. CI запускает `pytest` на Python 3.12. Бонусные задания с Redis rate limiting, CORS и rotation refresh-токенов не включены.

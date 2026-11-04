@@ -5,7 +5,11 @@ os.environ.setdefault("DATABASE_URL", "sqlite://")
 
 import pytest
 from unittest.mock import Mock
+from concurrent import futures
+
+import grpc
 from fastapi.testclient import TestClient
+from fastapi import Request
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -15,6 +19,10 @@ from app.core.security import hash_password, verify_password
 from app.database import Base, get_db
 from app.main import app
 from app.models import Delivery, MenuItem, Order, Role, User
+from app.modules.delivery.grpc_client import DeliveryGrpcClient
+from app.modules.delivery.router import get_delivery_client
+from delivery_service import server as grpc_server_module
+import delivery_pb2_grpc
 from tests.fakes import FakeCache
 
 
@@ -50,10 +58,29 @@ def client(monkeypatch):
         with session_factory() as db:
             yield db
 
+    monkeypatch.setattr(grpc_server_module, "SessionLocal", session_factory)
+    grpc_server = grpc.server(futures.ThreadPoolExecutor(max_workers=4))
+    delivery_pb2_grpc.add_DeliveryServiceServicer_to_server(
+        grpc_server_module.DeliveryServicer(), grpc_server
+    )
+    grpc_port = grpc_server.add_insecure_port("127.0.0.1:0")
+    grpc_server.start()
+
+    def override_delivery_client(request: Request):
+        token = request.headers.get("authorization", "").partition(" ")[2]
+        delivery_client = DeliveryGrpcClient(token, f"127.0.0.1:{grpc_port}")
+        try:
+            yield delivery_client
+        finally:
+            delivery_client.close()
+
     app.dependency_overrides[get_db] = override_db
+    app.dependency_overrides[get_delivery_client] = override_delivery_client
+    app.state.test_grpc_target = f"127.0.0.1:{grpc_port}"
     with TestClient(app) as test_client:
         yield test_client, session_factory, ids
     app.dependency_overrides.clear()
+    grpc_server.stop(0).wait()
     engine.dispose()
 
 

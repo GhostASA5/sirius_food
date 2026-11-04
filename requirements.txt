@@ -13,3 +13,5 @@ python-jose[cryptography]==3.3.0
 alembic==1.13.1
 redis>=6.1,<7
 celery==5.4.0
+grpcio==1.76.0
+grpcio-tools==1.76.0

@@ -7,6 +7,7 @@ class DeliveryRepositoryPort(Protocol):
     def get_active_by_courier(self, courier_id: int): ...
     def create(self, order_id: int, courier_id: int): ...
     def get_delivery(self, delivery_id: int): ...
+    def get_delivery_by_order(self, order_id: int): ...
     def save_completed(self, delivery, order): ...
     def list_by_courier(self, courier_id: int): ...
 
@@ -58,6 +59,13 @@ class DeliveryService:
 
     def get_delivery(self, delivery_id: int, actor_id: int, actor_role: str) -> dict:
         delivery = self.repository.get_delivery(delivery_id)
+        return self._checked_data(delivery, actor_id, actor_role)
+
+    def get_delivery_by_order(self, order_id: int, actor_id: int, actor_role: str) -> dict:
+        delivery = self.repository.get_delivery_by_order(order_id)
+        return self._checked_data(delivery, actor_id, actor_role)
+
+    def _checked_data(self, delivery, actor_id: int, actor_role: str) -> dict:
         if delivery is None:
             raise DeliveryError("Доставка не найдена", 404)
         order = self.repository.get_order(delivery.order_id)

@@ -11,9 +11,12 @@ RUN pip install --no-cache-dir -r requirements.txt \
     && useradd --create-home appuser
 
 COPY app ./app
+COPY delivery_service ./delivery_service
+COPY proto ./proto
 COPY alembic ./alembic
 COPY alembic.ini ./
 COPY scripts ./scripts
+RUN python -m scripts.generate_proto
 
 USER appuser
 

@@ -28,6 +28,9 @@ class DeliveryRepository:
     def get_delivery(self, delivery_id: int):
         return self.db.query(Delivery).filter(Delivery.id == delivery_id).first()
 
+    def get_delivery_by_order(self, order_id: int):
+        return self.db.query(Delivery).filter(Delivery.order_id == order_id).first()
+
     def save_completed(self, delivery, order):
         self.db.add(delivery)
         if order is not None:
