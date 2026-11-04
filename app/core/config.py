@@ -6,6 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     SECRET_KEY: str
     DATABASE_URL: str = "postgresql://sirius:sirius@localhost:5432/sirius_food"
+    REDIS_URL: str = "redis://localhost:6379/0"
     DEBUG: bool = False
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")

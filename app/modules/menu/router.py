@@ -26,6 +26,14 @@ def create_menu_category(payload: MenuCategoryCreate, db: Session = Depends(get_
     return {"status": "success", "category_id": category_id}
 
 
+@router.get("/categories/{category_id}")
+def get_menu_category(category_id: int, db: Session = Depends(get_db)):
+    try:
+        return MenuService(MenuRepository(db)).get_category_with_items(category_id)
+    except MenuError as exc:
+        raise HTTPException(exc.status_code, str(exc)) from exc
+
+
 @router.post("/items", dependencies=[Depends(require_role("admin", "cook"))])
 def create_menu_item(payload: MenuItemCreate, db: Session = Depends(get_db)):
     if payload.price <= 0:

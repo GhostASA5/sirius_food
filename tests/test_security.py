@@ -14,10 +14,12 @@ from app.core.security import hash_password, verify_password
 from app.database import Base, get_db
 from app.main import app
 from app.models import Delivery, MenuItem, Order, Role, User
+from tests.fakes import FakeCache
 
 
 @pytest.fixture
-def client():
+def client(monkeypatch):
+    monkeypatch.setattr("app.modules.menu.repository.get_redis_client", FakeCache)
     engine = create_engine(
         "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
     )
