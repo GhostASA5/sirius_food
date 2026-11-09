@@ -9,6 +9,7 @@ services:
       CELERY_RESULT_BACKEND: redis://redis:6379/2
       SIMULATE_EMAIL_FAILURES: ${SIMULATE_EMAIL_FAILURES:-false}
       DELIVERY_GRPC_TARGET: delivery:50051
+      RABBITMQ_URL: amqp://sirius:sirius@rabbitmq:5672/
       DEBUG: ${DEBUG:-false}
     ports:
       - "8000:8000"
@@ -19,6 +20,11 @@ services:
         condition: service_healthy
       delivery:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1', 8000), 2).close()"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
   delivery:
     build: .
     command: python -m delivery_service.server
@@ -46,6 +52,54 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+  outbox:
+    build: .
+    command: python -m app.workers.outbox_publisher
+    environment:
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
+      DATABASE_URL: postgresql://sirius:sirius@db:5432/sirius_food
+      RABBITMQ_URL: amqp://sirius:sirius@rabbitmq:5672/
+    depends_on:
+      app:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+  kitchen:
+    build: .
+    command: python -m app.workers.kitchen_consumer
+    environment:
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
+      DATABASE_URL: postgresql://sirius:sirius@db:5432/sirius_food
+      RABBITMQ_URL: amqp://sirius:sirius@rabbitmq:5672/
+    depends_on:
+      app:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+  delivery_worker:
+    build: .
+    command: python -m delivery_service.delivery_worker
+    environment:
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
+      DATABASE_URL: postgresql://sirius:sirius@db:5432/sirius_food
+      RABBITMQ_URL: amqp://sirius:sirius@rabbitmq:5672/
+    depends_on:
+      app:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+  compensation:
+    build: .
+    command: python -m app.workers.compensation_consumer
+    environment:
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
+      DATABASE_URL: postgresql://sirius:sirius@db:5432/sirius_food
+      RABBITMQ_URL: amqp://sirius:sirius@rabbitmq:5672/
+    depends_on:
+      app:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
   db:
     image: postgres:15
     environment:
@@ -70,5 +124,21 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    environment:
+      RABBITMQ_DEFAULT_USER: sirius
+      RABBITMQ_DEFAULT_PASS: sirius
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
 volumes:
   pg_data:
+  rabbitmq_data:

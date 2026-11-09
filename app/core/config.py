@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/2"
     SIMULATE_EMAIL_FAILURES: bool = False
     DELIVERY_GRPC_TARGET: str = "localhost:50051"
+    RABBITMQ_URL: str = "amqp://sirius:sirius@localhost:5672/"
     DEBUG: bool = False
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")

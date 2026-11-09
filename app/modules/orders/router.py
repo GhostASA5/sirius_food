@@ -47,3 +47,17 @@ def cancel_order(
     except OrderError as exc:
         raise HTTPException(exc.status_code, str(exc)) from exc
     return {"status": "success"}
+
+
+@router.post("/{order_id}/pay")
+def pay_order(
+    order_id: int, current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        OrderService(OrderRepository(db)).pay_order(
+            order_id, current_user.id, current_user.role.name
+        )
+    except OrderError as exc:
+        raise HTTPException(exc.status_code, str(exc)) from exc
+    return {"status": "success"}

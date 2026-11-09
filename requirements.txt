@@ -15,3 +15,4 @@ redis>=6.1,<7
 celery==5.4.0
 grpcio==1.76.0
 grpcio-tools==1.76.0
+aio-pika>=9.4,<10

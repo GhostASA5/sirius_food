@@ -1,4 +1,5 @@
 from typing import Protocol
+from uuid import uuid4
 
 
 class OrderRepositoryPort(Protocol):
@@ -6,6 +7,8 @@ class OrderRepositoryPort(Protocol):
     def get_menu_item_by_id(self, item_id: int): ...
     def place_order(self, user, item, quantity: int) -> int: ...
     def get_order(self, order_id: int): ...
+    def get_order_for_update(self, order_id: int): ...
+    def save_paid_with_event(self, order, event_id: str, amount: float): ...
     def save(self, order): ...
     def get_kitchen_orders(self): ...
 
@@ -56,6 +59,17 @@ class OrderService:
             raise OrderError("Order cannot be cancelled")
         order.status = "cancelled"
         self.repository.save(order)
+
+    def pay_order(self, order_id: int, current_user_id: int, actor_role: str = "student") -> None:
+        order = self.repository.get_order_for_update(order_id)
+        if order is None:
+            raise OrderError("Заказ не найден", 404)
+        if actor_role != "admin" and order.user_id != current_user_id:
+            raise OrderError("Access denied", 403)
+        if order.status != "processing":
+            raise OrderError("Оплатить можно только заказ в обработке")
+        amount = order.total_amount if order.total_amount is not None else order.item.price * order.quantity
+        self.repository.save_paid_with_event(order, str(uuid4()), amount)
 
     def get_kitchen_orders(self) -> list[dict]:
         return [

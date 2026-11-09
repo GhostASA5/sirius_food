@@ -59,6 +59,7 @@ class Order(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     item_id = Column(Integer, ForeignKey("menu_items.id"))
     quantity = Column(Integer, nullable=False)
+    total_amount = Column(Float, nullable=True)
     status = Column(String, default="processing")
     user = relationship("User")
     item = relationship("MenuItem")
@@ -73,3 +74,28 @@ class Delivery(Base):
     status = Column(String, default="pending")
     order = relationship("Order")
     courier = relationship("User")
+
+
+class KitchenOrder(Base):
+    __tablename__ = "kitchen_orders"
+
+    id = Column(Integer, primary_key=True)
+    order_id = Column(Integer, ForeignKey("orders.id"), nullable=False, unique=True)
+    status = Column(String, nullable=False, default="pending")
+
+
+class ProcessedEvent(Base):
+    __tablename__ = "processed_events"
+
+    id = Column(String(36), primary_key=True)
+    consumer = Column(String(50), primary_key=True)
+
+
+class OutboxEvent(Base):
+    __tablename__ = "outbox"
+
+    id = Column(Integer, primary_key=True)
+    event_id = Column(String(36), nullable=False, unique=True)
+    routing_key = Column(String(100), nullable=False)
+    payload = Column(String, nullable=False)
+    published_at = Column(DateTime(timezone=True), nullable=True)
