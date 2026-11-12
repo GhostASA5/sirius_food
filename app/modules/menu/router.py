@@ -42,7 +42,7 @@ def create_menu_item(payload: MenuItemCreate, db: Session = Depends(get_db)):
         raise HTTPException(400, "Название блюда слишком короткое")
     try:
         item_id = MenuService(MenuRepository(db)).create(
-            payload.name, payload.price, payload.category_id
+            payload.name, payload.price, payload.category_id, payload.description
         )
     except MenuError as exc:
         raise HTTPException(exc.status_code, str(exc)) from exc

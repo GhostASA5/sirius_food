@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     SIMULATE_EMAIL_FAILURES: bool = False
     DELIVERY_GRPC_TARGET: str = "localhost:50051"
     RABBITMQ_URL: str = "amqp://sirius:sirius@localhost:5672/"
+    ELASTICSEARCH_URL: str = "http://localhost:9200"
     DEBUG: bool = False
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")

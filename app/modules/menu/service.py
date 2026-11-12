@@ -9,7 +9,8 @@ class MenuRepositoryPort(Protocol):
     def get_category_by_name(self, name: str): ...
     def create_category(self, name: str): ...
     def get_by_name(self, name: str): ...
-    def create(self, name: str, price: float, category_id: int | None): ...
+    def create(self, name: str, price: float, category_id: int | None,
+               description: str | None): ...
     def save(self, item, previous_category_id: int | None = None): ...
 
 
@@ -37,11 +38,12 @@ class MenuService:
             raise MenuError("Категория с таким названием уже существует")
         return self.repository.create_category(name).id
 
-    def create(self, name: str, price: float, category_id: int | None = None) -> int:
+    def create(self, name: str, price: float, category_id: int | None = None,
+               description: str | None = None) -> int:
         if self.repository.get_by_name(name) is not None:
             raise MenuError("Блюдо с таким названием уже существует")
         self._check_category(category_id)
-        return self.repository.create(name, price, category_id).id
+        return self.repository.create(name, price, category_id, description).id
 
     def update(self, item_id: int, changes: dict) -> int:
         item = self.repository.get_by_id(item_id)
@@ -57,8 +59,8 @@ class MenuService:
         for key, value in changes.items():
             if value is not None:
                 setattr(item, key, value)
-            elif key == "category_id":
-                item.category_id = None
+            elif key in ("category_id", "description"):
+                setattr(item, key, None)
         self.repository.save(item, previous_category_id)
         return item.id
 

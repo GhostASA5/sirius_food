@@ -1,11 +1,12 @@
 import json
 from collections.abc import Callable
+from uuid import uuid4
 
 from redis.exceptions import LockError, RedisError
 from sqlalchemy.orm import Session
 
 from app.core.redis import get_redis_client
-from app.models import MenuCategory, MenuItem
+from app.models import MenuCategory, MenuItem, OutboxEvent
 
 
 class MenuRepository:
@@ -39,6 +40,7 @@ class MenuRepository:
         return {
             "id": item.id,
             "name": item.name,
+            "description": item.description,
             "price": item.price,
             "is_available": item.is_available,
             "category_id": item.category_id,
@@ -93,9 +95,23 @@ class MenuRepository:
     def get_by_name(self, name: str):
         return self.db.query(MenuItem).filter(MenuItem.name == name).first()
 
-    def create(self, name: str, price: float, category_id: int | None = None):
-        item = MenuItem(name=name, price=price, is_available=True, category_id=category_id)
+    def _queue_changed(self, item):
+        event_id = str(uuid4())
+        self.db.add(OutboxEvent(
+            event_id=event_id,
+            routing_key="menu.item.changed",
+            payload=json.dumps({"event_id": event_id, "item_id": item.id}),
+        ))
+
+    def create(self, name: str, price: float, category_id: int | None = None,
+               description: str | None = None):
+        item = MenuItem(
+            name=name, price=price, is_available=True,
+            category_id=category_id, description=description,
+        )
         self.db.add(item)
+        self.db.flush()
+        self._queue_changed(item)
         self.db.commit()
         self.db.refresh(item)
         keys = ["menu:all"]
@@ -106,6 +122,7 @@ class MenuRepository:
 
     def save(self, item, previous_category_id: int | None = None):
         self.db.add(item)
+        self._queue_changed(item)
         self.db.commit()
         self.db.refresh(item)
         keys = ["menu:all"]

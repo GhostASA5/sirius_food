@@ -35,6 +35,14 @@ async def declare_topology(channel):
         await queue.bind(exchange, routing_key=routing_key)
     cancelled_queue = await channel.declare_queue("order_cancelled_queue", durable=True)
     await cancelled_queue.bind(exchange, routing_key="order.cancelled")
+    search_dlq = await channel.declare_queue("search_dlq", durable=True)
+    await search_dlq.bind(dlx, routing_key="search.dlq")
+    search_queue = await channel.declare_queue(
+        "search_queue", durable=True,
+        arguments={"x-dead-letter-exchange": DLX_NAME,
+                   "x-dead-letter-routing-key": "search.dlq"},
+    )
+    await search_queue.bind(exchange, routing_key="menu.item.changed")
 
 
 async def publish_event(channel, routing_key: str, payload: dict, event_id: str):

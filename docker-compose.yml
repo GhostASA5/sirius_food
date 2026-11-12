@@ -10,6 +10,7 @@ services:
       SIMULATE_EMAIL_FAILURES: ${SIMULATE_EMAIL_FAILURES:-false}
       DELIVERY_GRPC_TARGET: delivery:50051
       RABBITMQ_URL: amqp://sirius:sirius@rabbitmq:5672/
+      ELASTICSEARCH_URL: http://elasticsearch:9200
       DEBUG: ${DEBUG:-false}
     ports:
       - "8000:8000"
@@ -100,6 +101,21 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+  search_worker:
+    build: .
+    command: sh -c "python -m scripts.reindex_menu && exec python -m app.workers.search_consumer"
+    environment:
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
+      DATABASE_URL: postgresql://sirius:sirius@db:5432/sirius_food
+      RABBITMQ_URL: amqp://sirius:sirius@rabbitmq:5672/
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+    depends_on:
+      app:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
   db:
     image: postgres:15
     environment:
@@ -139,6 +155,22 @@ services:
       interval: 5s
       timeout: 5s
       retries: 15
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.17.0
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+    ports:
+      - "127.0.0.1:9200:9200"
+    volumes:
+      - elastic_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9200/_cluster/health >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
 volumes:
   pg_data:
   rabbitmq_data:
+  elastic_data:

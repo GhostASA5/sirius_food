@@ -19,6 +19,7 @@ class MenuItemCreate(BaseModel):
     name: str
     price: float
     category_id: int | None = None
+    description: str | None = None
 
 
 class MenuItemUpdate(BaseModel):
@@ -26,6 +27,7 @@ class MenuItemUpdate(BaseModel):
     price: float | None = None
     is_available: bool | None = None
     category_id: int | None = None
+    description: str | None = None
 
 
 class MenuCategoryCreate(BaseModel):
