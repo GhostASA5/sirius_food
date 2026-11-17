@@ -10,6 +10,9 @@ class DeliveryRepository:
     def get_order(self, order_id: int):
         return self.db.query(Order).filter(Order.id == order_id).first()
 
+    def lock_order(self, order_id: int):
+        return self.db.query(Order).filter_by(id=order_id).with_for_update().first()
+
     def get_user(self, user_id: int):
         return self.db.query(User).filter(User.id == user_id).first()
 

@@ -11,6 +11,7 @@ from app.modules.menu.repository import MenuRepository
 from app.modules.orders.router import router as orders_router
 from app.modules.users.router import router as users_router
 from app.modules.search.router import router as search_router
+from app.modules.loyalty.router import router as loyalty_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -35,3 +36,4 @@ app.include_router(menu_router, prefix="/menu", tags=["menu"])
 app.include_router(orders_router, prefix="/orders", tags=["orders"])
 app.include_router(delivery_router, prefix="/delivery", tags=["delivery"])
 app.include_router(search_router, prefix="/search", tags=["search"])
+app.include_router(loyalty_router)

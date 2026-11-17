@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, Numeric, String
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -60,7 +60,7 @@ class Order(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     item_id = Column(Integer, ForeignKey("menu_items.id"))
     quantity = Column(Integer, nullable=False)
-    total_amount = Column(Float, nullable=True)
+    total_amount = Column(Numeric(16, 2), nullable=True)
     status = Column(String, default="processing")
     user = relationship("User")
     item = relationship("MenuItem")
@@ -100,3 +100,48 @@ class OutboxEvent(Base):
     routing_key = Column(String(100), nullable=False)
     payload = Column(String, nullable=False)
     published_at = Column(DateTime(timezone=True), nullable=True)
+
+
+class PromoCode(Base):
+    __tablename__ = "promo_codes"
+
+    id = Column(Integer, primary_key=True)
+    code = Column(String(64), nullable=False, unique=True)
+    discount_type = Column(String(10), nullable=False)
+    discount_value = Column(Numeric(16, 2), nullable=False)
+    valid_from = Column(DateTime(timezone=True), nullable=False)
+    valid_until = Column(DateTime(timezone=True), nullable=False, index=True)
+    max_uses = Column(Integer, nullable=False)
+    current_uses = Column(Integer, nullable=False, default=0)
+    min_order_amount = Column(Numeric(16, 2), nullable=False)
+    is_active = Column(Boolean, nullable=False, default=True)
+    once_per_user = Column(Boolean, nullable=False, default=True)
+
+
+class PromoCodeUsage(Base):
+    __tablename__ = "promo_code_usages"
+
+    order_id = Column(Integer, ForeignKey("orders.id"), primary_key=True)
+    promo_id = Column(Integer, ForeignKey("promo_codes.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+
+
+class LoyaltyAccount(Base):
+    __tablename__ = "loyalty_accounts"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, unique=True)
+    balance = Column(Numeric(16, 2), nullable=False, default=0)
+    total_earned = Column(Numeric(16, 2), nullable=False, default=0)
+    tier = Column(String(10), nullable=False, default="Bronze")
+
+
+class LoyaltyTransaction(Base):
+    __tablename__ = "loyalty_transactions"
+
+    id = Column(Integer, primary_key=True)
+    account_id = Column(Integer, ForeignKey("loyalty_accounts.id"), nullable=False, index=True)
+    order_id = Column(Integer, ForeignKey("orders.id"), nullable=False)
+    amount = Column(Numeric(16, 2), nullable=False)
+    type = Column(String(10), nullable=False)
+    idempotency_key = Column(String(64), nullable=False, unique=True)

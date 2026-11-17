@@ -4,10 +4,10 @@ import logging
 
 import aio_pika
 
-from app.core.config import get_settings
 from app.core.event_handlers import handle_compensation, handle_delivery, handle_kitchen
-from app.core.rabbitmq import EXCHANGE_NAME, declare_topology, open_channel
+from app.core.rabbitmq import declare_topology, open_channel
 from app.database import SessionLocal
+from app.modules.loyalty.events import handle_earn, handle_loyalty_cancellation, handle_promo_cancellation
 
 
 LOG = logging.getLogger(__name__)
@@ -15,6 +15,9 @@ HANDLERS = {
     "kitchen": handle_kitchen,
     "delivery": handle_delivery,
     "compensation": handle_compensation,
+    "loyalty_earn": handle_earn,
+    "loyalty_cancel": handle_loyalty_cancellation,
+    "promo_restore": handle_promo_cancellation,
 }
 MAX_RETRIES = 3
 
@@ -44,10 +47,7 @@ async def process_message(message, kind, channel):
             headers={"x-retries": retries + 1},
         )
         try:
-            exchange = await channel.get_exchange(EXCHANGE_NAME)
-            await exchange.publish(retry, routing_key=(
-                "delivery.failed" if kind == "compensation" else "order.paid"
-            ))
+            await channel.default_exchange.publish(retry, routing_key=f"{kind}_queue")
         except Exception:
             await message.nack(requeue=True)
             return

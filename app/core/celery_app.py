@@ -9,7 +9,7 @@ celery_app = Celery(
     "sirius_food",
     broker=settings.CELERY_BROKER_URL,
     backend=settings.CELERY_RESULT_BACKEND,
-    include=["app.tasks.orders"],
+    include=["app.tasks.orders", "app.tasks.loyalty"],
 )
 celery_app.conf.update(
     task_serializer="json",
@@ -28,4 +28,5 @@ celery_app.conf.update(
     task_reject_on_worker_lost=True,
     broker_connection_retry_on_startup=True,
     worker_prefetch_multiplier=1,
+    beat_schedule={"expire-promos-hourly": {"task": "loyalty.expire_promos", "schedule": 3600}},
 )

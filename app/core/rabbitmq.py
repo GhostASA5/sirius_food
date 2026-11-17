@@ -22,7 +22,10 @@ async def declare_topology(channel):
     dlx = await channel.declare_exchange(DLX_NAME, ExchangeType.DIRECT, durable=True)
     for name, routing_key in (("kitchen", "order.paid"),
                               ("delivery", "order.paid"),
-                              ("compensation", "delivery.failed")):
+                              ("compensation", "delivery.failed"),
+                              ("loyalty_earn", "order.paid"),
+                              ("loyalty_cancel", "order.cancelled"),
+                              ("promo_restore", "order.cancelled")):
         dlq = await channel.declare_queue(f"{name}_dlq", durable=True)
         await dlq.bind(dlx, routing_key=f"{name}.dlq")
         queue = await channel.declare_queue(

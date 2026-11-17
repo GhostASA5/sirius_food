@@ -1,3 +1,4 @@
+from decimal import Decimal
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -13,6 +14,8 @@ class Settings(BaseSettings):
     DELIVERY_GRPC_TARGET: str = "localhost:50051"
     RABBITMQ_URL: str = "amqp://sirius:sirius@localhost:5672/"
     ELASTICSEARCH_URL: str = "http://localhost:9200"
+    LOYALTY_SILVER: Decimal = Decimal("100")
+    LOYALTY_GOLD: Decimal = Decimal("500")
     DEBUG: bool = False
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
@@ -23,4 +26,6 @@ def get_settings() -> Settings:
     settings = Settings()
     if len(settings.SECRET_KEY) < 32:
         raise ValueError("SECRET_KEY must contain at least 32 characters")
+    if not Decimal("0") < settings.LOYALTY_SILVER < settings.LOYALTY_GOLD:
+        raise ValueError("Пороги лояльности должны удовлетворять 0 < SILVER < GOLD")
     return settings

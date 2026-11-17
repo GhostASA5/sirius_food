@@ -11,7 +11,7 @@ class UserRepository:
         return self.db.query(User).filter(User.email == email).first()
 
     def get_by_id(self, user_id: int):
-        return self.db.query(User).filter(User.id == user_id).first()
+        return self.db.query(User).filter(User.id == user_id).populate_existing().with_for_update().first()
 
     def create(self, email: str, phone: str | None, password_hash: str, role_name: str):
         role = self.db.query(Role).filter(Role.name == role_name).one()

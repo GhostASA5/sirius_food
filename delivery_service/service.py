@@ -3,6 +3,7 @@ from typing import Protocol
 
 class DeliveryRepositoryPort(Protocol):
     def get_order(self, order_id: int): ...
+    def lock_order(self, order_id: int): ...
     def get_user(self, user_id: int): ...
     def get_active_by_courier(self, courier_id: int): ...
     def create(self, order_id: int, courier_id: int): ...
@@ -23,11 +24,13 @@ class DeliveryService:
         self.repository = repository
 
     def assign(self, order_id: int, courier_id: int) -> int:
-        order = self.repository.get_order(order_id)
+        order = self.repository.lock_order(order_id)
         if order is None:
             raise DeliveryError("Заказ не найден", 404)
         if order.status != "paid":
             raise DeliveryError("Курьера можно назначить только на оплаченный заказ")
+        if self.repository.get_delivery_by_order(order_id) is not None:
+            raise DeliveryError("Для заказа уже существует доставка")
         courier = self.repository.get_user(courier_id)
         if courier is None:
             raise DeliveryError("Курьер не найден", 404)
@@ -47,12 +50,12 @@ class DeliveryService:
             raise DeliveryError("Доставка не найдена", 404)
         if actor_role != "admin" and delivery.courier_id != current_user_id:
             raise DeliveryError("Access denied", 403)
+        order = self.repository.lock_order(delivery.order_id)
         if delivery.status == "completed":
             raise DeliveryError("Доставка уже завершена")
-        if delivery.status == "cancelled":
+        if delivery.status == "cancelled" or (order is not None and order.status == "cancelled"):
             raise DeliveryError("Отменённую доставку нельзя завершить")
         delivery.status = "completed"
-        order = self.repository.get_order(delivery.order_id)
         if order is not None:
             order.status = "delivered"
         self.repository.save_completed(delivery, order)

@@ -4,10 +4,11 @@ from sqlalchemy.orm import Session
 from app.core.dependencies import get_current_user, require_role
 from app.database import get_db
 from app.models import User
+from app.modules.loyalty.service import LoyaltyError, ZERO
 from app.modules.orders.repository import OrderRepository
 from app.modules.orders.notifications import CeleryOrderNotifications
 from app.modules.orders.service import OrderError, OrderService
-from app.schemas import OrderCreate
+from app.schemas import OrderCreate, OrderPay
 
 router = APIRouter()
 
@@ -21,10 +22,12 @@ def create_order(
         raise HTTPException(400, "Количество должно быть больше нуля")
     try:
         order_id = OrderService(OrderRepository(db), CeleryOrderNotifications()).create_order(
-            current_user.id, payload.item_id, payload.quantity
+            current_user.id, payload.item_id, payload.quantity, payload.promo_code
         )
-    except OrderError as exc:
+    except (OrderError, LoyaltyError) as exc:
         raise HTTPException(exc.status_code, str(exc)) from exc
+    finally:
+        db.rollback()
     return {"status": "success", "order_id": order_id}
 
 
@@ -53,11 +56,13 @@ def cancel_order(
 def pay_order(
     order_id: int, current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    payload: OrderPay | None = None,
 ):
     try:
         OrderService(OrderRepository(db)).pay_order(
-            order_id, current_user.id, current_user.role.name
+            order_id, current_user.id, current_user.role.name,
+            points=payload.points if payload is not None else ZERO,
         )
-    except OrderError as exc:
+    except (OrderError, LoyaltyError) as exc:
         raise HTTPException(exc.status_code, str(exc)) from exc
     return {"status": "success"}

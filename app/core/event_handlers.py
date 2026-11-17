@@ -4,6 +4,7 @@ from uuid import uuid4
 from sqlalchemy.exc import IntegrityError
 
 from app.models import Delivery, KitchenOrder, Order, OutboxEvent, ProcessedEvent, Role, User
+from app.modules.orders.repository import OrderRepository
 
 
 def _event(payload):
@@ -36,7 +37,7 @@ def handle_kitchen(db, payload):
     event_id, order_id = _event(payload)
     if _processed(db, "kitchen", event_id):
         return False
-    order = db.get(Order, order_id)
+    order = db.query(Order).filter_by(id=order_id).with_for_update().first()
     if order is None:
         raise ValueError("Заказ не найден")
     if order.status != "paid":
@@ -88,25 +89,13 @@ def handle_delivery(db, payload):
 
 def handle_compensation(db, payload):
     event_id, order_id = _event(payload)
-    if _processed(db, "compensation", event_id):
-        return False
     order = db.query(Order).filter_by(id=order_id).with_for_update().first()
     if order is None:
         raise ValueError("Заказ не найден")
+    if _processed(db, "compensation", event_id):
+        return False
     if order.status == "paid":
-        user = db.query(User).filter_by(id=order.user_id).with_for_update().one()
-        amount = order.total_amount if order.total_amount is not None else payload["amount"]
-        user.balance += amount
-        order.status = "cancelled"
-        kitchen_order = db.query(KitchenOrder).filter_by(order_id=order_id).first()
-        if kitchen_order is not None:
-            kitchen_order.status = "cancelled"
-        cancelled_id = str(uuid4())
-        cancelled = {"event_id": cancelled_id, "order_id": order_id, "amount": amount}
-        db.add(OutboxEvent(
-            event_id=cancelled_id, routing_key="order.cancelled",
-            payload=json.dumps(cancelled),
-        ))
+        OrderRepository(db).prepare_cancellation(order, payload["amount"])
         compensated = True
     else:
         compensated = False

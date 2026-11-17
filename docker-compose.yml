@@ -65,6 +65,30 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+  loyalty_worker:
+    build: .
+    command: python -m app.workers.loyalty_consumer
+    environment:
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
+      DATABASE_URL: postgresql://sirius:sirius@db:5432/sirius_food
+      RABBITMQ_URL: amqp://sirius:sirius@rabbitmq:5672/
+      LOYALTY_SILVER: ${LOYALTY_SILVER:-100}
+      LOYALTY_GOLD: ${LOYALTY_GOLD:-500}
+    depends_on:
+      app:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+  beat:
+    build: .
+    command: celery -A app.core.celery_app beat --loglevel=info --schedule=/tmp/celerybeat-schedule
+    environment:
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+    depends_on:
+      worker:
+        condition: service_started
   kitchen:
     build: .
     command: python -m app.workers.kitchen_consumer

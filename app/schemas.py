@@ -1,4 +1,6 @@
-from pydantic import BaseModel, ConfigDict, EmailStr
+from decimal import Decimal
+
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class UserCreate(BaseModel):
@@ -37,6 +39,11 @@ class MenuCategoryCreate(BaseModel):
 class OrderCreate(BaseModel):
     item_id: int
     quantity: int
+    promo_code: str | None = Field(default=None, min_length=1, max_length=64)
+
+
+class OrderPay(BaseModel):
+    points: Decimal = Field(default=Decimal("0.00"), ge=0, max_digits=16, decimal_places=2)
 
 
 class DeliveryAssign(BaseModel):
