@@ -1,7 +1,13 @@
+x-observability: &observability
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+  SENTRY_DSN: ${SENTRY_DSN:-}
+
 services:
   app:
     build: .
     environment:
+      <<: *observability
+      OTEL_SERVICE_NAME: sirius-app
       SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
       DATABASE_URL: postgresql://sirius:sirius@db:5432/sirius_food
       REDIS_URL: redis://redis:6379/0
@@ -30,6 +36,8 @@ services:
     build: .
     command: python -m delivery_service.server
     environment:
+      <<: *observability
+      OTEL_SERVICE_NAME: sirius-delivery
       SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
       DATABASE_URL: postgresql://sirius:sirius@db:5432/sirius_food
     depends_on:
@@ -44,6 +52,8 @@ services:
     build: .
     command: celery -A app.core.celery_app worker --loglevel=info --concurrency=2 -Q default
     environment:
+      <<: *observability
+      OTEL_SERVICE_NAME: sirius-worker
       SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
       DATABASE_URL: postgresql://sirius:sirius@db:5432/sirius_food
       REDIS_URL: redis://redis:6379/0
@@ -57,6 +67,8 @@ services:
     build: .
     command: python -m app.workers.outbox_publisher
     environment:
+      <<: *observability
+      OTEL_SERVICE_NAME: sirius-outbox
       SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
       DATABASE_URL: postgresql://sirius:sirius@db:5432/sirius_food
       RABBITMQ_URL: amqp://sirius:sirius@rabbitmq:5672/
@@ -69,6 +81,8 @@ services:
     build: .
     command: python -m app.workers.loyalty_consumer
     environment:
+      <<: *observability
+      OTEL_SERVICE_NAME: sirius-loyalty_worker
       SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
       DATABASE_URL: postgresql://sirius:sirius@db:5432/sirius_food
       RABBITMQ_URL: amqp://sirius:sirius@rabbitmq:5672/
@@ -83,6 +97,8 @@ services:
     build: .
     command: celery -A app.core.celery_app beat --loglevel=info --schedule=/tmp/celerybeat-schedule
     environment:
+      <<: *observability
+      OTEL_SERVICE_NAME: sirius-beat
       SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
       CELERY_BROKER_URL: redis://redis:6379/1
       CELERY_RESULT_BACKEND: redis://redis:6379/2
@@ -93,6 +109,8 @@ services:
     build: .
     command: python -m app.workers.kitchen_consumer
     environment:
+      <<: *observability
+      OTEL_SERVICE_NAME: sirius-kitchen
       SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
       DATABASE_URL: postgresql://sirius:sirius@db:5432/sirius_food
       RABBITMQ_URL: amqp://sirius:sirius@rabbitmq:5672/
@@ -105,6 +123,8 @@ services:
     build: .
     command: python -m delivery_service.delivery_worker
     environment:
+      <<: *observability
+      OTEL_SERVICE_NAME: sirius-delivery_worker
       SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
       DATABASE_URL: postgresql://sirius:sirius@db:5432/sirius_food
       RABBITMQ_URL: amqp://sirius:sirius@rabbitmq:5672/
@@ -117,6 +137,8 @@ services:
     build: .
     command: python -m app.workers.compensation_consumer
     environment:
+      <<: *observability
+      OTEL_SERVICE_NAME: sirius-compensation
       SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
       DATABASE_URL: postgresql://sirius:sirius@db:5432/sirius_food
       RABBITMQ_URL: amqp://sirius:sirius@rabbitmq:5672/
@@ -129,6 +151,8 @@ services:
     build: .
     command: sh -c "python -m scripts.reindex_menu && exec python -m app.workers.search_consumer"
     environment:
+      <<: *observability
+      OTEL_SERVICE_NAME: sirius-search_worker
       SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
       DATABASE_URL: postgresql://sirius:sirius@db:5432/sirius_food
       RABBITMQ_URL: amqp://sirius:sirius@rabbitmq:5672/
@@ -166,14 +190,15 @@ services:
       retries: 10
   rabbitmq:
     image: rabbitmq:3.13-management
+    volumes:
+      - ./monitoring/rabbitmq-enabled-plugins:/etc/rabbitmq/enabled_plugins:ro
+      - rabbitmq_data:/var/lib/rabbitmq
     environment:
       RABBITMQ_DEFAULT_USER: sirius
       RABBITMQ_DEFAULT_PASS: sirius
     ports:
       - "5672:5672"
       - "15672:15672"
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 5s
@@ -194,6 +219,33 @@ services:
       interval: 10s
       timeout: 5s
       retries: 30
+  jaeger:
+    image: jaegertracing/all-in-one:1.64.0
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "127.0.0.1:16686:16686"
+  prometheus:
+    image: prom/prometheus:v3.0.1
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "127.0.0.1:9090:9090"
+  redis_exporter:
+    image: oliver006/redis_exporter:v1.67.0
+    environment:
+      REDIS_ADDR: redis://redis:6379
+  grafana:
+    image: grafana/grafana:11.4.0
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:3001:3000"
+    volumes:
+      - ./monitoring/grafana/datasources.yml:/etc/grafana/provisioning/datasources/default.yml:ro
+      - ./monitoring/grafana/dashboards.yml:/etc/grafana/provisioning/dashboards/default.yml:ro
+      - ./monitoring/grafana/dashboard.json:/var/lib/grafana/dashboards/sirius.json:ro
+
 volumes:
   pg_data:
   rabbitmq_data:

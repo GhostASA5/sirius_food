@@ -4,6 +4,9 @@ import aio_pika
 from aio_pika import DeliveryMode, ExchangeType, Message
 
 from app.core.config import get_settings
+from app.core.observability import headers
+from opentelemetry import trace
+import logging
 
 
 EXCHANGE_NAME = "sirius_events"
@@ -55,5 +58,9 @@ async def publish_event(channel, routing_key: str, payload: dict, event_id: str)
         message_id=event_id,
         delivery_mode=DeliveryMode.PERSISTENT,
         content_type="application/json",
+        headers=headers(),
     )
-    await exchange.publish(message, routing_key=routing_key)
+    with trace.get_tracer(__name__).start_as_current_span("RabbitMQ.publish", kind=trace.SpanKind.PRODUCER):
+        message.headers.update(headers())
+        await exchange.publish(message, routing_key=routing_key)
+        logging.getLogger(__name__).info("event_published", extra={"event_id": event_id, "routing_key": routing_key})

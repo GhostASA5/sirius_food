@@ -1,6 +1,10 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from prometheus_fastapi_instrumentator import Instrumentator
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from app.core.observability import CorrelationMiddleware
+from app.modules.observability.router import router as observability_router
 
 from app.core.config import get_settings
 from app.database import get_db
@@ -37,3 +41,7 @@ app.include_router(orders_router, prefix="/orders", tags=["orders"])
 app.include_router(delivery_router, prefix="/delivery", tags=["delivery"])
 app.include_router(search_router, prefix="/search", tags=["search"])
 app.include_router(loyalty_router)
+app.include_router(observability_router)
+app.add_middleware(CorrelationMiddleware)
+Instrumentator(excluded_handlers=["/metrics"]).instrument(app).expose(app)
+FastAPIInstrumentor.instrument_app(app, excluded_urls="/metrics")

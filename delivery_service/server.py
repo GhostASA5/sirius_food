@@ -1,4 +1,5 @@
 from concurrent import futures
+from app.core.grpc_observability import CorrelationInterceptor
 from time import sleep
 
 import grpc
@@ -123,7 +124,7 @@ class DeliveryServicer(delivery_pb2_grpc.DeliveryServiceServicer):
 
 
 def serve():
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10), interceptors=[CorrelationInterceptor()])
     delivery_pb2_grpc.add_DeliveryServiceServicer_to_server(DeliveryServicer(), server)
     server.add_insecure_port("[::]:50051")
     server.start()

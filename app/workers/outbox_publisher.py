@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from app.core.rabbitmq import declare_topology, open_channel, publish_event
 from app.database import SessionLocal
 from app.models import OutboxEvent
+from app.core.observability import message_context
 
 
 LOG = logging.getLogger(__name__)
@@ -26,9 +27,10 @@ async def publish_pending(limit=100):
             )
             for event in events:
                 try:
-                    await publish_event(
-                        channel, event.routing_key, json.loads(event.payload), event.event_id
-                    )
+                    with message_context(json.loads(event.context or "{}"), "Outbox.publish"):
+                        await publish_event(
+                            channel, event.routing_key, json.loads(event.payload), event.event_id
+                        )
                 except Exception:
                     db.rollback()
                     raise

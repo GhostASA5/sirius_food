@@ -100,6 +100,7 @@ class OutboxEvent(Base):
     routing_key = Column(String(100), nullable=False)
     payload = Column(String, nullable=False)
     published_at = Column(DateTime(timezone=True), nullable=True)
+    context = Column(String, nullable=True)
 
 
 class PromoCode(Base):

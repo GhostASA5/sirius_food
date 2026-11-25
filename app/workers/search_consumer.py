@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+from app.core.observability import message_context
 
 import aio_pika
 
@@ -14,6 +15,11 @@ LOG = logging.getLogger(__name__)
 
 
 async def process_message(message):
+    with message_context(message.headers, "search.consume"):
+        await _process_message(message)
+
+
+async def _process_message(message):
     try:
         payload = json.loads(message.body)
         item_id = int(payload["item_id"])
@@ -42,7 +48,7 @@ async def process_message(message):
             channel = message.channel
             retry = aio_pika.Message(
                 body=message.body, delivery_mode=aio_pika.DeliveryMode.PERSISTENT,
-                headers={"x-retries": retries + 1},
+                headers={**message.headers, "x-retries": retries + 1},
             )
             try:
                 exchange = await channel.get_exchange("sirius_events")

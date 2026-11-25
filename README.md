@@ -169,3 +169,13 @@ try {
 ```
 
 Контрольный запуск на отдельной базе PostgreSQL дал 1 успешное применение и 999 ответов «Промокод исчерпан», без других ответов. В БД подтверждены `current_uses = 1` и одна запись использования. Среднее время ответа составило 4,27 с, p95 — 8,4 с для одновременного старта 1000 пользователей.
+
+## Практическая работа № 9
+
+Добавлены JSON-логи, сквозной X-Correlation-ID, метрики Prometheus, дашборд Grafana и OpenTelemetry с Jaeger. Контекст сохраняется в Outbox и передаётся через RabbitMQ, Celery и gRPC.
+
+Запуск из каталога проекта: `docker compose up --build -d`. Grafana доступна на http://localhost:3001/d/sirius, Prometheus на http://localhost:9090/targets, Jaeger на http://localhost:16686. Логин Grafana — admin, пароль задаётся через GRAFANA_ADMIN_PASSWORD в .env.
+
+Демонстрация заказа: `docker compose exec app python -m scripts.demo_observability`. По напечатанному correlation ID можно найти записи API, Outbox и кухни. Подробные команды, результаты расследования и настройка Sentry находятся в [инструкции](docs/lab9.md).
+
+SDK Sentry подключён через SENTRY_DSN. Для выполнения критерия показа ошибки в Sentry требуется DSN собственного проекта. Локальный тест подтверждает тег correlation_id, но показ события в интерфейсе Sentry пока не выполнен.

@@ -1,0 +1,118 @@
+{
+  "uid": "sirius",
+  "title": "Сириус.Еда",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "RPS",
+      "type": "timeseries",
+      "datasource": {
+        "uid": "prometheus",
+        "type": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "targets": [
+        {
+          "expr": "sum by(handler) (rate(http_requests_total[1m]))",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Latency p95",
+      "type": "timeseries",
+      "datasource": {
+        "uid": "prometheus",
+        "type": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by(le, handler) (rate(http_request_duration_seconds_bucket[1m])))",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Ошибки 5xx",
+      "type": "timeseries",
+      "datasource": {
+        "uid": "prometheus",
+        "type": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{status=~\"5.*\"}[1m]))",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Очередь кухни",
+      "type": "timeseries",
+      "datasource": {
+        "uid": "prometheus",
+        "type": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "targets": [
+        {
+          "expr": "rabbitmq_queue_messages{queue=\"kitchen_queue\"}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Redis cache hit rate",
+      "type": "timeseries",
+      "datasource": {
+        "uid": "prometheus",
+        "type": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "targets": [
+        {
+          "expr": "rate(redis_keyspace_hits_total[5m]) / clamp_min(rate(redis_keyspace_hits_total[5m]) + rate(redis_keyspace_misses_total[5m]), 0.000001)",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
+}

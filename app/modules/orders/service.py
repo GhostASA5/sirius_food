@@ -1,6 +1,7 @@
 from decimal import Decimal
 from typing import Protocol
 from uuid import uuid4
+from opentelemetry import trace
 
 from app.modules.loyalty.service import LoyaltyService, ZERO, money
 
@@ -35,6 +36,7 @@ class OrderService:
         self.repository = repository
         self.notifications = notifications
 
+    @trace.get_tracer(__name__).start_as_current_span("OrderService.create")
     def create_order(self, user_id: int, item_id: int, quantity: int,
                      promo_code: str | None = None) -> int:
         if quantity <= 0:
@@ -71,6 +73,7 @@ class OrderService:
         self.repository.prepare_cancellation(order)
         self.repository.commit()
 
+    @trace.get_tracer(__name__).start_as_current_span("OrderService.pay")
     def pay_order(self, order_id: int, current_user_id: int, actor_role: str = "student",
                   points: Decimal = ZERO) -> None:
         order = self.repository.get_order_for_update(order_id)

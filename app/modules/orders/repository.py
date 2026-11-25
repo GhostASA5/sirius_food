@@ -1,4 +1,6 @@
 import json
+import logging
+from opentelemetry import trace
 from decimal import Decimal
 from uuid import uuid4
 
@@ -20,6 +22,7 @@ class OrderRepository:
     def get_menu_item_by_id(self, item_id: int):
         return self.db.query(MenuItem).filter(MenuItem.id == item_id).first()
 
+    @trace.get_tracer(__name__).start_as_current_span("DB.order.insert")
     def place_order(self, user, item, quantity: int, amount: Decimal, promo) -> int:
         order = Order(
             user_id=user.id, item_id=item.id, quantity=quantity,
@@ -37,6 +40,7 @@ class OrderRepository:
         except Exception:
             self.db.rollback()
             raise
+        logging.getLogger(__name__).info("order_created", extra={"order_id": order.id, "user_id": user.id})
         return order.id
 
     def get_order(self, order_id: int):
@@ -50,6 +54,7 @@ class OrderRepository:
         order.total_amount = amount
         self._event(order, event_id, "order.paid", amount)
         self.db.commit()
+        logging.getLogger(__name__).info("order_paid", extra={"order_id": order.id})
 
     def _event(self, order, event_id, routing_key, amount):
         payload = {

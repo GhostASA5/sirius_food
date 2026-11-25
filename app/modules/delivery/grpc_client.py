@@ -3,6 +3,7 @@ import grpc
 import delivery_pb2
 import delivery_pb2_grpc
 from app.core.config import get_settings
+from app.core.observability import headers
 
 
 class DeliveryClientError(Exception):
@@ -27,7 +28,9 @@ class DeliveryGrpcClient:
     def __init__(self, token: str, target: str | None = None):
         self.channel = grpc.insecure_channel(target or get_settings().DELIVERY_GRPC_TARGET)
         self.stub = delivery_pb2_grpc.DeliveryServiceStub(self.channel)
-        self.metadata = (("authorization", f"Bearer {token}"),)
+        self.metadata = (("authorization", f"Bearer {token}"),) + tuple(
+            (key.lower(), value) for key, value in headers().items()
+        )
 
     def close(self):
         self.channel.close()

@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.core.jwt import decode_token
 from app.database import get_db
 from app.models import User
+import sentry_sdk
 
 
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -27,6 +28,7 @@ def get_current_user(
             raise HTTPException(401, "User not found", headers={"WWW-Authenticate": "Bearer"})
         if user.is_blocked:
             raise HTTPException(403, "User is blocked")
+        sentry_sdk.set_user({"id": str(user.id)})
         db.expunge(user.role)
         db.expunge(user)
         return user
