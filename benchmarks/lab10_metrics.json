@@ -1,0 +1,38 @@
+{
+  "pool_peak": {
+    "status": "success",
+    "data": {
+      "resultType": "vector",
+      "result": [
+        {
+          "metric": {
+            "instance": "app:8000",
+            "job": "sirius_app"
+          },
+          "value": [
+            1795593718.9,
+            "3"
+          ]
+        }
+      ]
+    }
+  },
+  "api_cpu_peak_cores": {
+    "status": "success",
+    "data": {
+      "resultType": "vector",
+      "result": [
+        {
+          "metric": {
+            "instance": "app:8000",
+            "job": "sirius_app"
+          },
+          "value": [
+            1795593718.915,
+            "0.802"
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException, Path
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import require_role
@@ -13,6 +15,17 @@ router = APIRouter()
 @router.get("/items")
 def list_menu_items(db: Session = Depends(get_db)):
     return MenuService(MenuRepository(db)).get_all()
+
+
+@router.get("/items/{item_id}")
+def get_menu_item(
+    item_id: Annotated[int, Path(ge=1, le=2147483647)],
+    db: Session = Depends(get_db),
+):
+    try:
+        return MenuService(MenuRepository(db)).get_item(item_id)
+    except MenuError as exc:
+        raise HTTPException(exc.status_code, str(exc)) from exc
 
 
 @router.post("/categories", dependencies=[Depends(require_role("admin", "cook"))])

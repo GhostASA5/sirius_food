@@ -63,6 +63,8 @@ class OrderRepository:
             "customer_id": order.user_id,
             "amount": float(amount),
         }
+        if routing_key == "order.paid":
+            payload.update(total=float(amount), currency="RUB")
         self.db.add(OutboxEvent(
             event_id=event_id, routing_key=routing_key, payload=json.dumps(payload)
         ))

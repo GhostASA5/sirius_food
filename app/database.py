@@ -5,8 +5,11 @@ from app.core.config import get_settings
 from app.core.observability import headers
 from sqlalchemy import event
 import json
+from prometheus_client import Gauge
 
 engine = create_engine(get_settings().DATABASE_URL)
+pool_checked_out = Gauge("db_pool_checked_out", "Занятые соединения PostgreSQL")
+pool_checked_out.set_function(lambda: engine.pool.checkedout() if hasattr(engine.pool, "checkedout") else 0)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 

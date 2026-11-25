@@ -179,3 +179,9 @@ try {
 Демонстрация заказа: `docker compose exec app python -m scripts.demo_observability`. По напечатанному correlation ID можно найти записи API, Outbox и кухни. Подробные команды, результаты расследования и настройка Sentry находятся в [инструкции](docs/lab9.md).
 
 SDK Sentry подключён через SENTRY_DSN. Для выполнения критерия показа ошибки в Sentry требуется DSN собственного проекта. Локальный тест подтверждает тег correlation_id, но показ события в интерфейсе Sentry пока не выполнен.
+
+## Практическая работа № 10
+
+Добавлены PostgreSQL-тесты с Testcontainers и миграциями Alembic, сценарий Locust на 50–200 пользователей, обязательная проверка GitHub Actions и контракт Pact между монолитом и кухней. Событие OrderPaid расширено полями total и currency.
+
+Установка: `pip install -r requirements-test.txt`. Проверка: `python -m pytest tests/integration tests/contracts -v`. Команды нагрузки, измеренные результаты и инструкция защиты ветки находятся в [docs/lab10.md](docs/lab10.md).

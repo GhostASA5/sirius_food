@@ -1,0 +1,65 @@
+{
+  "consumer": {
+    "name": "kitchen"
+  },
+  "interactions": [
+    {
+      "contents": {
+        "content": {
+          "currency": "RUB",
+          "event_id": "a2e4b2d7-0cc4-4499-9051-4aa99e39ef32",
+          "order_id": 2,
+          "total": 150.0
+        },
+        "contentType": "application/json",
+        "encoded": false
+      },
+      "description": "OrderPaid",
+      "matchingRules": {
+        "body": {
+          "$.event_id": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.order_id": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "integer"
+              }
+            ]
+          },
+          "$.total": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "number"
+              }
+            ]
+          }
+        }
+      },
+      "metadata": {
+        "contentType": "application/json"
+      },
+      "pending": false,
+      "type": "Asynchronous/Messages"
+    }
+  ],
+  "metadata": {
+    "pactRust": {
+      "ffi": "0.5.13",
+      "models": "1.3.18"
+    },
+    "pactSpecification": {
+      "version": "4.0"
+    }
+  },
+  "provider": {
+    "name": "orders"
+  }
+}

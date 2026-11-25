@@ -1,0 +1,4 @@
+-r requirements.txt
+pytest-cov>=6,<8
+testcontainers[postgres]==4.10.0
+pact-python>=3,<4

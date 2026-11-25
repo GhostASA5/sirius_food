@@ -35,6 +35,11 @@ def _commit(db):
 
 def handle_kitchen(db, payload):
     event_id, order_id = _event(payload)
+    total = payload["total"]
+    if isinstance(total, bool) or not isinstance(total, (int, float)) or total < 0:
+        raise ValueError("Некорректная сумма заказа")
+    if payload["currency"] != "RUB":
+        raise ValueError("Неподдерживаемая валюта")
     if _processed(db, "kitchen", event_id):
         return False
     order = db.query(Order).filter_by(id=order_id).with_for_update().first()

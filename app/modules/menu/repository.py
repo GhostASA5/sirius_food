@@ -78,6 +78,15 @@ class MenuRepository:
     def get_by_id(self, item_id: int):
         return self.db.query(MenuItem).filter(MenuItem.id == item_id).first()
 
+    def get_item(self, item_id: int) -> dict | None:
+        item = self.get_by_id(item_id)
+        if item is None:
+            return None
+        return {
+            **self._item_data(item),
+            "category": item.category.name if item.category else None,
+        }
+
     def get_category(self, category_id: int):
         return self.db.query(MenuCategory).filter(MenuCategory.id == category_id).first()
 

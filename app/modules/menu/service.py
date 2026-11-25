@@ -3,6 +3,7 @@ from typing import Protocol
 
 class MenuRepositoryPort(Protocol):
     def get_by_id(self, item_id: int): ...
+    def get_item(self, item_id: int): ...
     def get_all(self): ...
     def get_category_with_items(self, category_id: int): ...
     def get_category(self, category_id: int): ...
@@ -26,6 +27,12 @@ class MenuService:
 
     def get_all(self) -> list[dict]:
         return self.repository.get_all()
+
+    def get_item(self, item_id: int) -> dict:
+        item = self.repository.get_item(item_id)
+        if item is None:
+            raise MenuError("Блюдо не найдено", 404)
+        return item
 
     def get_category_with_items(self, category_id: int) -> dict:
         data = self.repository.get_category_with_items(category_id)

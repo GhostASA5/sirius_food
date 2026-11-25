@@ -3,6 +3,7 @@
 .env
 .venv
 .packages
+.testdeps
 __pycache__
 *.pyc
 .pytest_cache
